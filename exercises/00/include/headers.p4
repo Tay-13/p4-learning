@@ -80,6 +80,10 @@ struct metadata {
     bit<32> id_ht2;
     bit<32> id;
     
+    // define resubmitted metadata
+    @resubmit(1) bit<3> resubmit_reason;
+    @resubmit(1) bit<8> resubmit_f;  // 0: new packet; 1: resubmitted packet
+
 }
 
 header flowID_t {
@@ -93,6 +97,7 @@ header flowID_t {
 header estimate_t {
     bit<32>  freq;
 }
+
 
 struct headers {
     ethernet_t   ethernet;

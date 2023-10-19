@@ -32,7 +32,8 @@ parser MyParser(packet_in packet,
         meta.id_ht1 = 0;
         meta.id_ht2 = 0;
         meta.id = 0;
-
+        meta.resubmit_reason = 0;
+        meta.resubmit_f = 0;
         transition parse_ethernet;
     }
 
@@ -71,7 +72,10 @@ parser MyParser(packet_in packet,
 
     // TO DO
     // for writing the tuple to the header of resubmitted packet 
-
+    // state parse_resubmit {
+    //    hdr.resub.resubmit_f = 0;
+    //    transition accept;
+    //}
 }
 
 

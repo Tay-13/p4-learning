@@ -248,95 +248,143 @@ control MyIngress(inout headers hdr,
     apply {
         if (hdr.ipv4.isValid()){
             if (hdr.tcp.isValid()){
+                if(meta.resubmit_reason == 0){
+                    // ****************update cm sketch************//
+                    Insert_CM0();
+                    Insert_CM1();
+                    Insert_CM2();
+                    find_min(hdr.est_cm.freq, meta.cnt_cm0, meta.cnt_cm1, meta.cnt_cm2);
 
-                // ****************update cm sketch************//
-                Insert_CM0();
-                Insert_CM1();
-                Insert_CM2();
-                find_min(hdr.est_cm.freq, meta.cnt_cm0, meta.cnt_cm1, meta.cnt_cm2);
-
-                // ****************update h-table************//
-                choose_stage();
-                // ****************update id************//
-                if(meta.key_idx0 == 1) {
-                    read_ID_Table0();
-                    if(hdr.id.matched != 0) {
-                        if(hdr.id.matched == 2){
-                            write_ID_Table0();
+                    // ****************update h-table************//
+                    choose_stage();
+                    // ****************update id************//
+                    if(meta.key_idx0 == 1) {
+                        read_ID_Table0();
+                        if(hdr.id.matched != 0) {
+                            if(hdr.id.matched == 2){
+                                write_ID_Table0();
+                            }
                         }
                     }
-                }
-                if(meta.key_idx1 == 1) {
-                    if(hdr.id.matched != 0){
-                        read_ID_Table1();
-                        if(hdr.id.matched == 2){
-                            write_ID_Table1();
+                    else if(meta.key_idx1 == 1) {
+                        if(hdr.id.matched != 0){
+                            read_ID_Table1();
+                            if(hdr.id.matched == 2){
+                                write_ID_Table1();
+                            }
+                            write_counter_Table1();
                         }
-                        write_counter_Table1();
                     }
-                }
-                if(meta.key_idx2 == 1) {
-                    if(hdr.id.matched != 0){
-                        read_ID_Table2();
-                        if(hdr.id.matched == 2){
-                            write_ID_Table2();
+                    else{
+                        if(hdr.id.matched != 0){
+                            read_ID_Table2();
+                            if(hdr.id.matched == 2){
+                                write_ID_Table2();
+                            }
+                            write_counter_Table2();
                         }
-                        write_counter_Table2();
                     }
+
+                    // ****************update counter************//
+                    // read all counter tables to find min
+                    read_counter_Table0();
+                    if(meta.key_idx0 == 1) {
+                        if(hdr.id.matched != 0) {
+                            write_counter_Table0();
+                        }
+                    }
+                    read_counter_Table1();
+                    if(meta.key_idx1 == 1) {
+                        if(hdr.id.matched != 0) {
+                            write_counter_Table1();
+                        }
+                    }
+                    read_counter_Table2();
+                    if(meta.key_idx2 == 1) {
+                        if(hdr.id.matched != 0) {
+                            write_counter_Table2();
+                        }
+                    }
+                    
+                    // ****************find min cell************// 
+                    if(meta.cnt_ht0 < meta.cnt_ht1) {
+                        hdr.id.min_cnt_ht = meta.cnt_ht0;
+                        hdr.id.min_stage = 0;
+                        hdr.id.min_index_ht = meta.index_ht0;
+                    } else {
+                        hdr.id.min_cnt_ht = meta.cnt_ht1;
+                        hdr.id.min_stage = 1;
+                        hdr.id.min_index_ht = meta.index_ht1;
+                    }
+
+                    if(hdr.id.min_cnt_ht > meta.cnt_ht2) {
+                        hdr.id.min_cnt_ht = meta.cnt_ht2;
+                        hdr.id.min_stage = 2;
+                        hdr.id.min_index_ht = meta.index_ht2;
+                    }
+                    bit<ID_CELL_SIZE> curID = 0;
+                    curID[15:0] = hdr.tcp.srcPort;
+                    curID[31:16] = hdr.tcp.dstPort;
+                    hdr.id.key_id = curID;
                 }
 
-                // ****************update counter************//
-                // read all counter tables to find min
-                read_counter_Table0();
-                if(meta.key_idx0 == 1) {
-                    if(hdr.id.matched != 0) {
-                        write_counter_Table0();
-                    }
-                }
-                read_counter_Table1();
-                if(meta.key_idx1 == 1) {
-                    if(hdr.id.matched != 0) {
-                        write_counter_Table1();
-                    }
-                }
-                read_counter_Table2();
-                if(meta.key_idx2 == 1) {
-                    if(hdr.id.matched != 0) {
-                        write_counter_Table2();
-                    }
-                }
-                
-                // ****************find min cell************// 
-                if(meta.cnt_ht0 < meta.cnt_ht1) {
-                    hdr.id.min_cnt_ht = meta.cnt_ht0;
-                    hdr.id.min_stage = 0;
-                    hdr.id.min_index_ht = meta.index_ht0;
-                } else {
-                    hdr.id.min_cnt_ht = meta.cnt_ht1;
-                    hdr.id.min_stage = 1;
-                    hdr.id.min_index_ht = meta.index_ht1;
-                }
-
-                if(hdr.id.min_cnt_ht > meta.cnt_ht2) {
-                    hdr.id.min_cnt_ht = meta.cnt_ht2;
-                    hdr.id.min_stage = 2;
-                    hdr.id.min_index_ht = meta.index_ht2;
-                }
-                bit<ID_CELL_SIZE> curID = 0;
-                curID[15:0] = hdr.tcp.srcPort;
-                curID[31:16] = hdr.tcp.dstPort;
-                hdr.id.key_id = curID;
-
-
-                // TSET: if not matched, we drop the packet
+                // if not matched, mark resubmitted and resubmit
                 if(hdr.id.matched == 0){
-                    drop();
-                    return;
+                    // TSET: if not matched, we drop the packet
+                    // drop();
+                    // return;
+                    meta.resubmit_reason = 1;
+                    meta.resubmit_f = 1;
+                    resubmit(1w1);
                 }
             }
             // TO DO
             // RESUBMIT
+            else{
 
+                // TSET
+                drop();
+                return;
+                
+                // update ID
+                if(hdr.id.min_stage == 0){
+                    // if min cell value is 1, we replace the ID
+                    if(hdr.id.min_cnt_ht == 1){
+                        ht_ID0.write(hdr.id.min_index_ht, hdr.id.key_id);
+                    }
+                }
+                else if(hdr.id.min_stage == 1){
+                    if(hdr.id.min_cnt_ht == 1){
+                        ht_ID1.write(hdr.id.min_index_ht, hdr.id.key_id);
+                    }
+                }
+                else{
+                    if(hdr.id.min_cnt_ht == 1){
+                        ht_ID2.write(hdr.id.min_index_ht, hdr.id.key_id);
+                    }
+                }
+
+                // update counter
+                if(hdr.id.min_stage == 0){
+                    // if min cell value is 1, we replace the ID
+                    if(hdr.id.min_cnt_ht > 1){
+                        ht_counter0.write(hdr.id.min_index_ht, hdr.id.min_cnt_ht-1);
+                    }
+                }
+                if(hdr.id.min_stage == 1){
+                    // if min cell value is 1, we replace the ID
+                    if(hdr.id.min_cnt_ht > 1){
+                        ht_counter1.write(hdr.id.min_index_ht, hdr.id.min_cnt_ht-1);
+                    }
+                }
+                if(hdr.id.min_stage == 2){
+                    // if min cell value is 1, we replace the ID
+                    if(hdr.id.min_cnt_ht > 1){
+                        ht_counter2.write(hdr.id.min_index_ht, hdr.id.min_cnt_ht-1);
+                    }
+                }
+            }
+            
             ipv4_lpm.apply();  
         }
     }
