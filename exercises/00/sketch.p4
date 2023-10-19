@@ -7,14 +7,15 @@
 
 /* CONSTANTS */
 const bit<32> SKETCH_BUCKET_LENGTH = 1024;
-const bit<32> TABLE_CELL_LENGTH = 100;
+const bit<32> TABLE_CELL_LENGTH = 1000;
 
 #define ID_CELL_SIZE 10w32
 
+#define EMPTY_CELL 32w0
 
 
 #define SKETCH_HASH_MAX 10w1023  // define the max hash value, set to the SKETCH_BUCKET_LENGTH
-#define TABLE_HASH_MAX 10w100
+#define TABLE_HASH_MAX 10w999
 #define HASH_BASE 10w0
 
 
@@ -109,37 +110,42 @@ control MyIngress(inout headers hdr,
         if(meta.index == 2w0){
             meta.key_idx0 = 1;
         }
-        if(meta.index == 2w1){
+        else if(meta.index == 2w1){
             meta.key_idx1 = 1;
         }
-        if(meta.index == 2w2){
+        else{
             meta.key_idx2 = 1;
         }
     }
-    
+
     register<bit<ID_CELL_SIZE>>(TABLE_CELL_LENGTH) ht_ID0;
+    register<bit<ID_CELL_SIZE>>(TABLE_CELL_LENGTH) ht_ID1;
+    register<bit<ID_CELL_SIZE>>(TABLE_CELL_LENGTH) ht_ID2;
     register<bit<32>>(TABLE_CELL_LENGTH) ht_counter0;
+    register<bit<32>>(TABLE_CELL_LENGTH) ht_counter1;
+    register<bit<32>>(TABLE_CELL_LENGTH) ht_counter2;
+
+
     action read_ID_Table0() {
         hash(meta.index_ht0, HashAlgorithm.crc16, HASH_BASE, 
-            {hdr.tcp.srcPort}, TABLE_HASH_MAX);
-        bit<ID_CELL_SIZE> curID = 0;
-        curID[15:0] = hdr.tcp.srcPort;
-        curID[31:16] = hdr.tcp.dstPort;
+            {hdr.tcp.srcPort, 10w12}, TABLE_HASH_MAX);
         ht_ID0.read(meta.id_ht0, meta.index_ht0);
         // matched cell
-        if(meta.id_ht0 == curID){
+        if(meta.id_ht0 == hdr.id.key_id){
             hdr.id.matched = 1;
         }
         // empty cell
-        if(meta.id_ht0 == 32w0){
+        else if(meta.id_ht0 == EMPTY_CELL){
             hdr.id.matched = 2;
+        }
+        // ATTENTION!!!!!!!!!!!!! initial here
+        // otherwise, matched will be initialized with a random number (not 0 probably)
+        else{
+            hdr.id.matched = 0;
         }
     }
     action write_ID_Table0() {
-        bit<ID_CELL_SIZE> curID = 0;
-        curID[15:0] = hdr.tcp.srcPort;
-        curID[31:16] = hdr.tcp.dstPort;
-        ht_ID0.write(meta.index_ht0, curID);
+        ht_ID0.write(meta.index_ht0, hdr.id.key_id);
     }
     action read_counter_Table0() {
         ht_counter0.read(meta.cnt_ht0, meta.index_ht0);
@@ -151,27 +157,23 @@ control MyIngress(inout headers hdr,
     }
 
 
-    register<bit<ID_CELL_SIZE>>(TABLE_CELL_LENGTH) ht_ID1;
-    register<bit<32>>(TABLE_CELL_LENGTH) ht_counter1;
+    
     action read_ID_Table1() {
         hash(meta.index_ht1, HashAlgorithm.crc32, HASH_BASE, 
-            {hdr.tcp.srcPort}, TABLE_HASH_MAX);
-        bit<ID_CELL_SIZE> curID = 0;
-        curID[15:0] = hdr.tcp.srcPort;
-        curID[31:16] = hdr.tcp.dstPort;
+            {hdr.tcp.srcPort, 10w34}, TABLE_HASH_MAX);
         ht_ID1.read(meta.id_ht1, meta.index_ht1);
-        if(meta.id_ht1 == curID){
+        if(meta.id_ht1 == hdr.id.key_id){
             hdr.id.matched = 1;
         }
-        if(meta.id_ht1 == 32w0){
+        else if(meta.id_ht1 == EMPTY_CELL){
             hdr.id.matched = 2;
+        }
+        else{
+            hdr.id.matched = 0;
         }
     }
     action write_ID_Table1() {
-        bit<ID_CELL_SIZE> curID = 0;
-        curID[15:0] = hdr.tcp.srcPort;
-        curID[31:16] = hdr.tcp.dstPort;
-        ht_ID1.write(meta.index_ht1, curID);
+        ht_ID1.write(meta.index_ht1, hdr.id.key_id);
     }
     action read_counter_Table1() {
         ht_counter1.read(meta.cnt_ht1, meta.index_ht1);
@@ -183,30 +185,26 @@ control MyIngress(inout headers hdr,
     }
 
 
-    register<bit<ID_CELL_SIZE>>(TABLE_CELL_LENGTH) ht_ID2;
-    register<bit<32>>(TABLE_CELL_LENGTH) ht_counter2;
+    
     action read_ID_Table2() {
         hash(meta.index_ht2, HashAlgorithm.crc32_custom, HASH_BASE, 
-            {hdr.tcp.srcPort}, TABLE_HASH_MAX);
-        bit<ID_CELL_SIZE> curID = 0;
-        curID[15:0] = hdr.tcp.srcPort;
-        curID[31:16] = hdr.tcp.dstPort;
+            {hdr.tcp.srcPort, 10w56}, TABLE_HASH_MAX);
         ht_ID2.read(meta.id_ht2, meta.index_ht2);
-        if(meta.id_ht2 == curID){
+        if(meta.id_ht2 == hdr.id.key_id){
             hdr.id.matched = 1;
         }
-        if(meta.id_ht2 == 32w0){
+        if(meta.id_ht2 == EMPTY_CELL){
             hdr.id.matched = 2;
+        }
+        else{
+            hdr.id.matched = 0;
         }
     }
     action write_ID_Table2() {
-        bit<ID_CELL_SIZE> curID = 0;
-        curID[15:0] = hdr.tcp.srcPort;
-        curID[31:16] = hdr.tcp.dstPort;
-        ht_ID2.write(meta.index_ht2, curID);
+        ht_ID2.write(meta.index_ht2, hdr.id.key_id);
     }
     action read_counter_Table2() {
-        ht_counter2.read(meta.cnt_ht0, meta.index_ht2);
+        ht_counter2.read(meta.cnt_ht2, meta.index_ht2);
     }
     action write_counter_Table2() {
         ht_counter2.read(meta.cnt_ht2, meta.index_ht2);
@@ -245,10 +243,14 @@ control MyIngress(inout headers hdr,
         default_action = NoAction();
     }
 
+    action resend_action() {
+        resubmit(meta.resubmit_f);
+    }
+
     apply {
         if (hdr.ipv4.isValid()){
             if (hdr.tcp.isValid()){
-                if(meta.resubmit_reason == 0){
+                if(meta.resubmit_f == 0){
                     // ****************update cm sketch************//
                     Insert_CM0();
                     Insert_CM1();
@@ -256,6 +258,10 @@ control MyIngress(inout headers hdr,
                     find_min(hdr.est_cm.freq, meta.cnt_cm0, meta.cnt_cm1, meta.cnt_cm2);
 
                     // ****************update h-table************//
+                    bit<ID_CELL_SIZE> curID = 0;
+                    curID[15:0] = hdr.tcp.srcPort;
+                    curID[31:16] = hdr.tcp.dstPort;
+                    hdr.id.key_id = curID;
                     choose_stage();
                     // ****************update id************//
                     if(meta.key_idx0 == 1) {
@@ -267,21 +273,19 @@ control MyIngress(inout headers hdr,
                         }
                     }
                     else if(meta.key_idx1 == 1) {
+                        read_ID_Table1();
                         if(hdr.id.matched != 0){
-                            read_ID_Table1();
                             if(hdr.id.matched == 2){
                                 write_ID_Table1();
                             }
-                            write_counter_Table1();
                         }
                     }
                     else{
+                        read_ID_Table2();
                         if(hdr.id.matched != 0){
-                            read_ID_Table2();
                             if(hdr.id.matched == 2){
                                 write_ID_Table2();
                             }
-                            write_counter_Table2();
                         }
                     }
 
@@ -322,30 +326,24 @@ control MyIngress(inout headers hdr,
                         hdr.id.min_stage = 2;
                         hdr.id.min_index_ht = meta.index_ht2;
                     }
-                    bit<ID_CELL_SIZE> curID = 0;
-                    curID[15:0] = hdr.tcp.srcPort;
-                    curID[31:16] = hdr.tcp.dstPort;
-                    hdr.id.key_id = curID;
                 }
 
                 // if not matched, mark resubmitted and resubmit
                 if(hdr.id.matched == 0){
                     // TSET: if not matched, we drop the packet
-                    // drop();
-                    // return;
-                    meta.resubmit_reason = 1;
-                    meta.resubmit_f = 1;
-                    resubmit(1w1);
+                    drop();
+                    return;
+                    // meta.resubmit_f = 1;
+                    // resend_action();
                 }
             }
             // TO DO
             // RESUBMIT
             else{
-
                 // TSET
-                drop();
-                return;
-                
+                // drop();
+                // return;
+
                 // update ID
                 if(hdr.id.min_stage == 0){
                     // if min cell value is 1, we replace the ID
@@ -384,8 +382,8 @@ control MyIngress(inout headers hdr,
                     }
                 }
             }
-            
-            ipv4_lpm.apply();  
+
+            ipv4_lpm.apply();     
         }
     }
 }

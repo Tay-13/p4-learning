@@ -53,7 +53,8 @@ def main():
     sum = 0
     for value in totals.values():
         sum += value
-    print("total : ", sum)
+
+    print("total : ", sum, "; distinct : ", len(totals))
 
 if __name__ == '__main__':
     main()

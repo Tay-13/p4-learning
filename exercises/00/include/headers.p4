@@ -81,8 +81,8 @@ struct metadata {
     bit<32> id;
     
     // define resubmitted metadata
-    @resubmit(1) bit<3> resubmit_reason;
-    @resubmit(1) bit<8> resubmit_f;  // 0: new packet; 1: resubmitted packet
+    // bit<3> resubmit_reason;
+    bit<8> resubmit_f;  // 0: new packet; 1: resubmitted packet
 
 }
 
