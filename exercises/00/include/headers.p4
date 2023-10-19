@@ -75,16 +75,16 @@ struct metadata {
     bit<32> cnt_ht0;
     bit<32> cnt_ht1;
     bit<32> cnt_ht2;
-    bit<64> id_ht0;
-    bit<64> id_ht1;
-    bit<64> id_ht2;
+    bit<32> id_ht0;
+    bit<32> id_ht1;
+    bit<32> id_ht2;
     bit<32> min_cnt_ht;
-    bit<64> id;
-    bit<2>  matched;  // 0: not matched; 1: matched; 2: empty
+    bit<32> id;
+    bit<2>  matched;  // 0: not matched; 1: matched; 2: empty cell
 }
 
 header flowID_t {
-    bit<64> key_id;
+    bit<32> key_id;
 }
 
 header estimate_t {

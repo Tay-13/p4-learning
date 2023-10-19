@@ -9,6 +9,8 @@
 const bit<32> SKETCH_BUCKET_LENGTH = 1024;
 const bit<32> TABLE_CELL_LENGTH = 2048;
 
+#define ID_CELL_SIZE 10w32
+
 
 
 #define SKETCH_HASH_MAX 10w1023  // define the max hash value, set to the SKETCH_BUCKET_LENGTH
@@ -43,7 +45,7 @@ control MyIngress(inout headers hdr,
     register<bit<32>>(SKETCH_BUCKET_LENGTH) cms_r0;
     action Insert_CM0() {
         hash(meta.index_cm0, HashAlgorithm.crc16, HASH_BASE,
-                {hdr.ipv4.srcAddr}, SKETCH_HASH_MAX);
+                {hdr.tcp.srcPort}, SKETCH_HASH_MAX);
         cms_r0.read(meta.cnt_cm0, meta.index_cm0);
         meta.cnt_cm0 = meta.cnt_cm0 + 1;
         cms_r0.write(meta.index_cm0, meta.cnt_cm0);
@@ -55,7 +57,7 @@ control MyIngress(inout headers hdr,
     register<bit<32>>(SKETCH_BUCKET_LENGTH) cms_r1;
     action Insert_CM1() {
         hash(meta.index_cm1, HashAlgorithm.crc32, HASH_BASE,
-                {hdr.ipv4.srcAddr}, SKETCH_HASH_MAX);
+                {hdr.tcp.srcPort}, SKETCH_HASH_MAX);
         cms_r1.read(meta.cnt_cm1, meta.index_cm1);
         meta.cnt_cm1 = meta.cnt_cm1 + 1;
         cms_r1.write(meta.index_cm1, meta.cnt_cm1);
@@ -67,7 +69,7 @@ control MyIngress(inout headers hdr,
     register<bit<32>>(SKETCH_BUCKET_LENGTH) cms_r2;
     action Insert_CM2() {
         hash(meta.index_cm2, HashAlgorithm.crc16_custom, HASH_BASE,
-                {hdr.ipv4.srcAddr}, SKETCH_HASH_MAX);
+                {hdr.tcp.srcPort}, SKETCH_HASH_MAX);
         cms_r2.read(meta.cnt_cm2, meta.index_cm2);
         meta.cnt_cm2 = meta.cnt_cm2 + 1;
         cms_r2.write(meta.index_cm2, meta.cnt_cm2);
@@ -84,7 +86,7 @@ control MyIngress(inout headers hdr,
     action choose_stage() {
         
         hash(meta.index, HashAlgorithm.crc16, 2w0, 
-            {hdr.ipv4.dstAddr}, 2w3);
+            {hdr.tcp.dstPort}, 2w3);
         if(meta.index == 2w0){
             meta.key_idx0 = 1;
         }
@@ -96,28 +98,28 @@ control MyIngress(inout headers hdr,
         }
     }
     
-    register<bit<64>>(TABLE_CELL_LENGTH) ht_ID0;
+    register<bit<ID_CELL_SIZE>>(TABLE_CELL_LENGTH) ht_ID0;
     register<bit<32>>(TABLE_CELL_LENGTH) ht_counter0;
     action read_ID_Table0() {
         hash(meta.index_ht0, HashAlgorithm.crc16, HASH_BASE, 
-            {hdr.ipv4.srcAddr}, TABLE_HASH_MAX);
-        bit<64> curID = 0;
-        curID[31:0] = hdr.ipv4.srcAddr;
-        curID[63:32] = hdr.ipv4.dstAddr;
+            {hdr.tcp.srcPort}, TABLE_HASH_MAX);
+        bit<ID_CELL_SIZE> curID = 0;
+        curID[15:0] = hdr.tcp.srcPort;
+        curID[31:16] = hdr.tcp.dstPort;
         ht_ID0.read(meta.id_ht0, meta.index_ht0);
         // matched cell
         if(meta.id_ht0 == curID){
             meta.matched = 1;
         }
         // empty cell
-        if(meta.id_ht0 == 64w0){
+        if(meta.id_ht0 == 32w0){
             meta.matched = 2;
         }
     }
     action write_ID_Table0() {
-        bit<64> curID = 0;
-        curID[31:0] = hdr.ipv4.srcAddr;
-        curID[63:32] = hdr.ipv4.dstAddr;
+        bit<ID_CELL_SIZE> curID = 0;
+        curID[15:0] = hdr.tcp.srcPort;
+        curID[31:16] = hdr.tcp.dstPort;
         ht_ID0.write(meta.index_ht0, curID);
     }
     action write_counter_Table0() {
@@ -127,26 +129,26 @@ control MyIngress(inout headers hdr,
     }
 
 
-    register<bit<64>>(TABLE_CELL_LENGTH) ht_ID1;
+    register<bit<ID_CELL_SIZE>>(TABLE_CELL_LENGTH) ht_ID1;
     register<bit<32>>(TABLE_CELL_LENGTH) ht_counter1;
     action read_ID_Table1() {
         hash(meta.index_ht1, HashAlgorithm.crc32, HASH_BASE, 
-            {hdr.ipv4.srcAddr}, TABLE_HASH_MAX);
-        bit<64> curID = 0;
-        curID[31:0] = hdr.ipv4.srcAddr;
-        curID[63:32] = hdr.ipv4.dstAddr;
+            {hdr.tcp.srcPort}, TABLE_HASH_MAX);
+        bit<ID_CELL_SIZE> curID = 0;
+        curID[15:0] = hdr.tcp.srcPort;
+        curID[31:16] = hdr.tcp.dstPort;
         ht_ID1.read(meta.id_ht1, meta.index_ht1);
         if(meta.id_ht1 == curID){
             meta.matched = 1;
         }
-        if(meta.id_ht1 == 64w0){
+        if(meta.id_ht1 == 32w0){
             meta.matched = 2;
         }
     }
     action write_ID_Table1() {
-        bit<64> curID = 0;
-        curID[31:0] = hdr.ipv4.srcAddr;
-        curID[63:32] = hdr.ipv4.dstAddr;
+        bit<ID_CELL_SIZE> curID = 0;
+        curID[15:0] = hdr.tcp.srcPort;
+        curID[31:16] = hdr.tcp.dstPort;
         ht_ID1.write(meta.index_ht1, curID);
     }
     action write_counter_Table1() {
@@ -156,26 +158,26 @@ control MyIngress(inout headers hdr,
     }
 
 
-    register<bit<64>>(TABLE_CELL_LENGTH) ht_ID2;
+    register<bit<ID_CELL_SIZE>>(TABLE_CELL_LENGTH) ht_ID2;
     register<bit<32>>(TABLE_CELL_LENGTH) ht_counter2;
     action read_ID_Table2() {
         hash(meta.index_ht2, HashAlgorithm.crc32_custom, HASH_BASE, 
-            {hdr.ipv4.srcAddr}, TABLE_HASH_MAX);
-        bit<64> curID = 0;
-        curID[31:0] = hdr.ipv4.srcAddr;
-        curID[63:32] = hdr.ipv4.dstAddr;
+            {hdr.tcp.srcPort}, TABLE_HASH_MAX);
+        bit<ID_CELL_SIZE> curID = 0;
+        curID[15:0] = hdr.tcp.srcPort;
+        curID[31:16] = hdr.tcp.dstPort;
         ht_ID2.read(meta.id_ht2, meta.index_ht2);
         if(meta.id_ht2 == curID){
             meta.matched = 1;
         }
-        if(meta.id_ht2 == 64w0){
+        if(meta.id_ht2 == 32w0){
             meta.matched = 2;
         }
     }
     action write_ID_Table2() {
-        bit<64> curID = 0;
-        curID[31:0] = hdr.ipv4.srcAddr;
-        curID[63:32] = hdr.ipv4.dstAddr;
+        bit<ID_CELL_SIZE> curID = 0;
+        curID[15:0] = hdr.tcp.srcPort;
+        curID[31:16] = hdr.tcp.dstPort;
         ht_ID2.write(meta.index_ht2, curID);
     }
     action write_counter_Table2() {

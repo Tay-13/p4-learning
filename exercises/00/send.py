@@ -14,15 +14,15 @@ def get_if():
     return iface
 
 def send_random_traffic(dst_ip, num_packets):
-
-    dst_addr = socket.gethostbyname(dst_ip)
     total_pkts = 0
-    random_port = random.randint(1024,65000)
-    iface = get_if()
-    #For this exercise the destination mac address is not important. Just ignore the value we use.
-    p = Ether(dst="00:01:0a:02:02:00", src=get_if_hwaddr(iface)) / IP(dst=dst_addr)
-    p = p / TCP(dport=random_port)
     for i in range(num_packets):
+        dst_addr = socket.gethostbyname(dst_ip)
+        random_dport = random.randint(1024,2024)
+        random_sport = random.randint(1024,2024)
+        iface = get_if()
+        #For this exercise the destination mac address is not important. Just ignore the value we use.
+        p = Ether(dst="00:01:0a:02:02:00", src=get_if_hwaddr(iface)) / IP(dst=dst_addr)
+        p = p / TCP(sport=random_sport,dport=random_dport)
         sendp(p, iface = iface)
         total_pkts += 1
     print("Sent %s packets in total" % total_pkts)
