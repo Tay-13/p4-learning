@@ -4,6 +4,8 @@ from scapy.all import IP, TCP, Ether
 from scapy.layers.inet import _IPOption_HDR
 from scapy.all import Packet, IPOption
 
+
+
 def get_if():
     ifs=get_if_list()
     iface=None # "h1-eth0"
@@ -22,6 +24,7 @@ iface = get_if()
 
 
 def handle_pkt(pkt):
+
     if IP in pkt and TCP in pkt:
         src_ip = pkt[IP].src
         dst_ip = pkt[IP].dst
@@ -41,10 +44,16 @@ def handle_pkt(pkt):
         totals[id_tup] += 1
         print("Received from %s total: %s" %
                 (id_tup, totals[id_tup]))
+    
+
 
 def main():
     sniff(iface = iface,
           prn = lambda x: handle_pkt(x))
+    sum = 0
+    for value in totals.values():
+        sum += value
+    print("total : ", sum)
 
 if __name__ == '__main__':
     main()

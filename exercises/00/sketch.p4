@@ -7,14 +7,14 @@
 
 /* CONSTANTS */
 const bit<32> SKETCH_BUCKET_LENGTH = 1024;
-const bit<32> TABLE_CELL_LENGTH = 2048;
+const bit<32> TABLE_CELL_LENGTH = 100;
 
 #define ID_CELL_SIZE 10w32
 
 
 
 #define SKETCH_HASH_MAX 10w1023  // define the max hash value, set to the SKETCH_BUCKET_LENGTH
-#define TABLE_HASH_MAX 12w2047
+#define TABLE_HASH_MAX 10w100
 #define HASH_BASE 10w0
 
 
@@ -82,6 +82,25 @@ control MyIngress(inout headers hdr,
 
     // *******  H-Table ******************* //
     
+    action find_min_ht(inout bit<32> mincnt, in bit<32> cnt0, in bit<32> cnt1,
+                    in bit<32> cnt2) {
+        if(cnt0 < cnt1) {
+            mincnt = cnt0;
+            hdr.id.min_stage = 0;
+            hdr.id.min_index_ht = meta.index_ht0;
+        } else {
+            mincnt = cnt1;
+            hdr.id.min_stage = 1;
+            hdr.id.min_index_ht = meta.index_ht1;
+        }
+
+        if(mincnt > cnt2) {
+            mincnt = cnt2;
+            hdr.id.min_stage = 2;
+            hdr.id.min_index_ht = meta.index_ht2;
+        }
+    }
+
     
     action choose_stage() {
         
@@ -109,11 +128,11 @@ control MyIngress(inout headers hdr,
         ht_ID0.read(meta.id_ht0, meta.index_ht0);
         // matched cell
         if(meta.id_ht0 == curID){
-            meta.matched = 1;
+            hdr.id.matched = 1;
         }
         // empty cell
         if(meta.id_ht0 == 32w0){
-            meta.matched = 2;
+            hdr.id.matched = 2;
         }
     }
     action write_ID_Table0() {
@@ -121,6 +140,9 @@ control MyIngress(inout headers hdr,
         curID[15:0] = hdr.tcp.srcPort;
         curID[31:16] = hdr.tcp.dstPort;
         ht_ID0.write(meta.index_ht0, curID);
+    }
+    action read_counter_Table0() {
+        ht_counter0.read(meta.cnt_ht0, meta.index_ht0);
     }
     action write_counter_Table0() {
         ht_counter0.read(meta.cnt_ht0, meta.index_ht0);
@@ -139,10 +161,10 @@ control MyIngress(inout headers hdr,
         curID[31:16] = hdr.tcp.dstPort;
         ht_ID1.read(meta.id_ht1, meta.index_ht1);
         if(meta.id_ht1 == curID){
-            meta.matched = 1;
+            hdr.id.matched = 1;
         }
         if(meta.id_ht1 == 32w0){
-            meta.matched = 2;
+            hdr.id.matched = 2;
         }
     }
     action write_ID_Table1() {
@@ -150,6 +172,9 @@ control MyIngress(inout headers hdr,
         curID[15:0] = hdr.tcp.srcPort;
         curID[31:16] = hdr.tcp.dstPort;
         ht_ID1.write(meta.index_ht1, curID);
+    }
+    action read_counter_Table1() {
+        ht_counter1.read(meta.cnt_ht1, meta.index_ht1);
     }
     action write_counter_Table1() {
         ht_counter1.read(meta.cnt_ht1, meta.index_ht1);
@@ -168,10 +193,10 @@ control MyIngress(inout headers hdr,
         curID[31:16] = hdr.tcp.dstPort;
         ht_ID2.read(meta.id_ht2, meta.index_ht2);
         if(meta.id_ht2 == curID){
-            meta.matched = 1;
+            hdr.id.matched = 1;
         }
         if(meta.id_ht2 == 32w0){
-            meta.matched = 2;
+            hdr.id.matched = 2;
         }
     }
     action write_ID_Table2() {
@@ -179,6 +204,9 @@ control MyIngress(inout headers hdr,
         curID[15:0] = hdr.tcp.srcPort;
         curID[31:16] = hdr.tcp.dstPort;
         ht_ID2.write(meta.index_ht2, curID);
+    }
+    action read_counter_Table2() {
+        ht_counter2.read(meta.cnt_ht0, meta.index_ht2);
     }
     action write_counter_Table2() {
         ht_counter2.read(meta.cnt_ht2, meta.index_ht2);
@@ -220,42 +248,96 @@ control MyIngress(inout headers hdr,
     apply {
         if (hdr.ipv4.isValid()){
             if (hdr.tcp.isValid()){
+
+                // ****************update cm sketch************//
                 Insert_CM0();
                 Insert_CM1();
                 Insert_CM2();
-
                 find_min(hdr.est_cm.freq, meta.cnt_cm0, meta.cnt_cm1, meta.cnt_cm2);
 
-                // TO DO 
-                // INSERT H-Table
+                // ****************update h-table************//
                 choose_stage();
+                // ****************update id************//
                 if(meta.key_idx0 == 1) {
                     read_ID_Table0();
-                    if(meta.matched == 2){
-                        write_ID_Table0();
+                    if(hdr.id.matched != 0) {
+                        if(hdr.id.matched == 2){
+                            write_ID_Table0();
+                        }
                     }
-                    write_counter_Table0();
                 }
                 if(meta.key_idx1 == 1) {
-                    read_ID_Table1();
-                    if(meta.matched == 2){
-                        write_ID_Table1();
+                    if(hdr.id.matched != 0){
+                        read_ID_Table1();
+                        if(hdr.id.matched == 2){
+                            write_ID_Table1();
+                        }
+                        write_counter_Table1();
                     }
-                    write_counter_Table1();
                 }
                 if(meta.key_idx2 == 1) {
-                    read_ID_Table2();
-                    if(meta.matched == 2){
-                        write_ID_Table2();
+                    if(hdr.id.matched != 0){
+                        read_ID_Table2();
+                        if(hdr.id.matched == 2){
+                            write_ID_Table2();
+                        }
+                        write_counter_Table2();
                     }
-                    write_counter_Table2();
+                }
+
+                // ****************update counter************//
+                // read all counter tables to find min
+                read_counter_Table0();
+                if(meta.key_idx0 == 1) {
+                    if(hdr.id.matched != 0) {
+                        write_counter_Table0();
+                    }
+                }
+                read_counter_Table1();
+                if(meta.key_idx1 == 1) {
+                    if(hdr.id.matched != 0) {
+                        write_counter_Table1();
+                    }
+                }
+                read_counter_Table2();
+                if(meta.key_idx2 == 1) {
+                    if(hdr.id.matched != 0) {
+                        write_counter_Table2();
+                    }
+                }
+                
+                // ****************find min cell************// 
+                if(meta.cnt_ht0 < meta.cnt_ht1) {
+                    hdr.id.min_cnt_ht = meta.cnt_ht0;
+                    hdr.id.min_stage = 0;
+                    hdr.id.min_index_ht = meta.index_ht0;
+                } else {
+                    hdr.id.min_cnt_ht = meta.cnt_ht1;
+                    hdr.id.min_stage = 1;
+                    hdr.id.min_index_ht = meta.index_ht1;
+                }
+
+                if(hdr.id.min_cnt_ht > meta.cnt_ht2) {
+                    hdr.id.min_cnt_ht = meta.cnt_ht2;
+                    hdr.id.min_stage = 2;
+                    hdr.id.min_index_ht = meta.index_ht2;
+                }
+                bit<ID_CELL_SIZE> curID = 0;
+                curID[15:0] = hdr.tcp.srcPort;
+                curID[31:16] = hdr.tcp.dstPort;
+                hdr.id.key_id = curID;
+
+
+                // TSET: if not matched, we drop the packet
+                if(hdr.id.matched == 0){
+                    drop();
+                    return;
                 }
             }
-
             // TO DO
             // RESUBMIT
 
-            ipv4_lpm.apply();
+            ipv4_lpm.apply();  
         }
     }
 }

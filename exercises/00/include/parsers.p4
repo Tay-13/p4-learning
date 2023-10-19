@@ -31,10 +31,7 @@ parser MyParser(packet_in packet,
         meta.id_ht0 = 0;
         meta.id_ht1 = 0;
         meta.id_ht2 = 0;
-        meta.min_cnt_ht = 0;
-
         meta.id = 0;
-        meta.matched = 0;
 
         transition parse_ethernet;
     }
