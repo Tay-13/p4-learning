@@ -60,7 +60,10 @@ header tcp_t{
 }
 
 struct metadata {
-    //TODO 7.1: define the 4 metadata fields you need for bloom filter index and reading the values
+    bit<32> output_hash_one;
+    bit<32> output_hash_two;
+    bit<32> counter_one;
+    bit<32> counter_two;
 }
 
 struct headers {
@@ -79,8 +82,29 @@ parser MyParser(packet_in packet,
                 inout standard_metadata_t standard_metadata) {
 
     state start {
-        //TODO 2: Define a parser for ethernet, ipv4 and tcp
+
+        packet.extract(hdr.ethernet);
+        transition select(hdr.ethernet.etherType){
+
+            TYPE_IPV4: ipv4;
+            default: accept;
+        }
     }
+
+    state ipv4 {
+        packet.extract(hdr.ipv4);
+
+        transition select(hdr.ipv4.protocol){
+            TYPE_TCP: tcp;
+            default: accept;
+        }
+    }
+
+    state tcp {
+       packet.extract(hdr.tcp);
+       transition accept;
+    }
+
 }
 
 /*************************************************************************
@@ -100,28 +124,81 @@ control MyIngress(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
 
 
-    //TODO 6: define a the couting bloom filter using a register
+    register<bit<BLOOM_FILTER_BIT_WIDTH>>(BLOOM_FILTER_ENTRIES) bloom_filter;
 
     action drop() {
         mark_to_drop(standard_metadata);
     }
 
     action update_bloom_filter(){
-        //TODO 7: Define the update bloom filter action
+       //Get register position
+       hash(meta.output_hash_one, HashAlgorithm.crc16, (bit<16>)0, {hdr.ipv4.srcAddr,
+                                                          hdr.ipv4.dstAddr,
+                                                          hdr.tcp.srcPort,
+                                                          hdr.tcp.dstPort,
+                                                          hdr.ipv4.protocol},
+                                                          (bit<32>)BLOOM_FILTER_ENTRIES);
+
+       hash(meta.output_hash_two, HashAlgorithm.crc32, (bit<16>)0, {hdr.ipv4.srcAddr,
+                                                          hdr.ipv4.dstAddr,
+                                                          hdr.tcp.srcPort,
+                                                          hdr.tcp.dstPort,
+                                                          hdr.ipv4.protocol},
+                                                          (bit<32>)BLOOM_FILTER_ENTRIES);
+
+        //Read counters
+        bloom_filter.read(meta.counter_one, meta.output_hash_one);
+        bloom_filter.read(meta.counter_two, meta.output_hash_two);
+
+        meta.counter_one = meta.counter_one + 1;
+        meta.counter_two = meta.counter_two + 1;
+
+        //write counters
+
+        bloom_filter.write(meta.output_hash_one, meta.counter_one);
+        bloom_filter.write(meta.output_hash_two, meta.counter_two);
     }
 
     action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
 
-        //TODO 5: implement the forwarding action
+        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+
+       //set the destination mac address that we got from the match in the table
+        hdr.ethernet.dstAddr = dstAddr;
+
+        //set the output port that we also get from the table
+        standard_metadata.egress_spec = port;
+
+        //decrease ttl by 1
+        hdr.ipv4.ttl = hdr.ipv4.ttl -1;
 
     }
 
     table ipv4_lpm {
-        //TODO 4: define the l3 forwarding table
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        actions = {
+            ipv4_forward;
+            drop;
+            NoAction;
+        }
+        size = 1024;
+        default_action = NoAction();
     }
 
     apply {
-        //TODO 8: implement the main logic
+        if (hdr.ipv4.isValid()){
+            if (hdr.tcp.isValid()){
+                update_bloom_filter();
+                //only if IPV4 the rule is applied. Therefore other packets will not be forwarded.
+                if ( (meta.counter_one > PACKET_THRESHOLD && meta.counter_two > PACKET_THRESHOLD) ){
+                    drop();
+                    return;
+                }
+            }
+            ipv4_lpm.apply();
+        }
     }
 }
 
@@ -140,8 +217,22 @@ control MyEgress(inout headers hdr,
 *************************************************************************/
 
 control MyComputeChecksum(inout headers hdr, inout metadata meta) {
-    apply {
-        //TODO 9: update the checksum field
+     apply {
+	update_checksum(
+	    hdr.ipv4.isValid(),
+            { hdr.ipv4.version,
+	      hdr.ipv4.ihl,
+              hdr.ipv4.diffserv,
+              hdr.ipv4.totalLen,
+              hdr.ipv4.identification,
+              hdr.ipv4.flags,
+              hdr.ipv4.fragOffset,
+              hdr.ipv4.ttl,
+              hdr.ipv4.protocol,
+              hdr.ipv4.srcAddr,
+              hdr.ipv4.dstAddr },
+            hdr.ipv4.hdrChecksum,
+            HashAlgorithm.csum16);
     }
 }
 
@@ -152,7 +243,9 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
-        //TODO 3: Deparse the ethernet, ipv4 and tcp headers
+        packet.emit(hdr.ethernet);
+        packet.emit(hdr.ipv4);
+        packet.emit(hdr.tcp);
     }
 }
 
