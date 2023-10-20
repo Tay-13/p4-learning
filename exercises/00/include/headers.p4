@@ -52,8 +52,8 @@ header tcp_t{
 }
 
 struct resubmit_meta_t{
-    @field_list(0)
-    bit<8> resubmit_f;  // 0: new packet; 1: resubmitted packet
+    @resubmit(0)
+    @resubmit(0) bit<8> resubmit_f;  // 0: new packet; 1: resubmitted packet
 
 }
 

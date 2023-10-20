@@ -330,16 +330,19 @@ control MyIngress(inout headers hdr,
                     // drop();
                     // return;
                     meta.resubmit_meta.resubmit_f = 1;
-                    resubmit_preserving_field_list(0);
+                    resubmit<resubmit_meta_t>(meta.resubmit_meta);
+                }
+                else{
+                    ipv4_lpm.apply();
                 }
             }
             // TO DO
             // RESUBMIT
             else{
                 // TSET
-                drop();
-                return;
-
+                // drop();
+                // return;
+                
                 // update ID
                 if(hdr.id.min_stage == 0){
                     // if min cell value is 1, we replace the ID
@@ -377,9 +380,10 @@ control MyIngress(inout headers hdr,
                         ht_counter2.write(hdr.id.min_index_ht, hdr.id.min_cnt_ht-1);
                     }
                 }
+                ipv4_lpm.apply();
             }
 
-            ipv4_lpm.apply();     
+                 
         }
     }
 }
