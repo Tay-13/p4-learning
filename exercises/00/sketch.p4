@@ -243,14 +243,10 @@ control MyIngress(inout headers hdr,
         default_action = NoAction();
     }
 
-    action resend_action() {
-        resubmit(meta.resubmit_f);
-    }
-
     apply {
         if (hdr.ipv4.isValid()){
             if (hdr.tcp.isValid()){
-                if(meta.resubmit_f == 0){
+                if(meta.resubmit_meta.resubmit_f == 0){
                     // ****************update cm sketch************//
                     Insert_CM0();
                     Insert_CM1();
@@ -331,18 +327,18 @@ control MyIngress(inout headers hdr,
                 // if not matched, mark resubmitted and resubmit
                 if(hdr.id.matched == 0){
                     // TSET: if not matched, we drop the packet
-                    drop();
-                    return;
-                    // meta.resubmit_f = 1;
-                    // resend_action();
+                    // drop();
+                    // return;
+                    meta.resubmit_meta.resubmit_f = 1;
+                    resubmit_preserving_field_list(0);
                 }
             }
             // TO DO
             // RESUBMIT
             else{
                 // TSET
-                // drop();
-                // return;
+                drop();
+                return;
 
                 // update ID
                 if(hdr.id.min_stage == 0){
