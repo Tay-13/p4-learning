@@ -51,8 +51,7 @@ header tcp_t{
     bit<16> urgentPtr;
 }
 
-struct resubmit_meta_t{
-    @resubmit(1) bit<1> resubmit_reason;
+struct resub_meta_t{
     @resubmit(1) bit<1> resubmit_f;  // 0: new packet; 1: resubmitted packet
     // bit<1> resubmit_f;  // 0: new packet; 1: resubmitted packet
 }
@@ -88,7 +87,7 @@ struct metadata {
     
     // define resubmitted metadata
     // bit<3> resubmit_reason;
-    resubmit_meta_t resubmit_meta;
+    resub_meta_t resubmit_meta;
 }
 
 header flowID_t {
@@ -97,7 +96,6 @@ header flowID_t {
     bit<32> min_cnt_ht;
     bit<32> min_index_ht; 
     bit<8> min_stage;
-    bit<8> resubmitted;
 }
 
 header estimate_t {

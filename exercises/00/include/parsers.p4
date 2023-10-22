@@ -32,9 +32,6 @@ parser MyParser(packet_in packet,
         meta.id_ht1 = 0;
         meta.id_ht2 = 0;
         meta.id = 0;
-        
-        meta.resubmit_meta.resubmit_reason = 0;
-        meta.resubmit_meta.resubmit_f = 0;
 
         transition parse_ethernet;
     }
@@ -62,51 +59,43 @@ parser MyParser(packet_in packet,
         transition parse_estimate;
     }
 
-    state parse_estimate {
-        packet.extract(hdr.est_cm);
-        transition parse_flowID;
-    }
-
-    state parse_flowID {
-        // packet.extract(hdr.id);
-        hdr.id.key_id = 0;
-        hdr.id.matched = 0;
-        hdr.id.min_cnt_ht = 0;
-        hdr.id.min_index_ht = 0;
-        hdr.id.min_stage = 0;
-        hdr.id.resubmitted = 0;
-        transition accept;
-    }
-
     // state parse_estimate {
-    //     packet.extract(hdr.est_cm);
-    //     transition select(meta.resubmit_meta.resubmit_f) {
-	// 		0: parse_new;
-	// 		1: parse_resubmit;
-	// 	}
+    //    packet.extract(hdr.est_cm);
+    //    transition parse_flowID;
     // }
 
-    // state parse_new {
+    // state parse_flowID {
+    //     // packet.extract(hdr.id);
     //     hdr.id.key_id = 0;
     //     hdr.id.matched = 0;
     //     hdr.id.min_cnt_ht = 0;
     //     hdr.id.min_index_ht = 0;
     //     hdr.id.min_stage = 0;
-    //     hdr.id.resubmitted = 0;
     //     transition accept;
     // }
 
-    // state parse_resubmit {
-    //     packet.extract(hdr.id);
-    //     transition accept;
-    // }
+    state parse_estimate {
+        packet.extract(hdr.est_cm);
+        transition select(hdr.est_cm.freq) {
+            1 : parse_resubmit;
+            default : parse_new;	
+		}
+    }
 
-    // TO DO
-    // for writing the tuple to the header of resubmitted packet 
-    // state parse_resubmit {
-    //    hdr.resub.resubmit_f = 0;
-    //    transition accept;
-    //}
+    state parse_new {
+        hdr.id.key_id = 0;
+        hdr.id.matched = 0;
+        hdr.id.min_cnt_ht = 0;
+        hdr.id.min_index_ht = 0;
+        hdr.id.min_stage = 0;
+        transition accept;
+    }
+
+    state parse_resubmit {
+        packet.extract(hdr.id);
+        transition accept;
+    }
+
 }
 
 

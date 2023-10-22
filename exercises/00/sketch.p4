@@ -247,13 +247,15 @@ control MyIngress(inout headers hdr,
     apply {
         if (hdr.ipv4.isValid()){
             if (hdr.tcp.isValid()){
-                // write_count_pkt();
-                if(meta.resubmit_meta.resubmit_reason == 0) {
+                // if(meta.resubmit_meta.resubmit_f != 1) {
+                if(hdr.est_cm.freq != 1) {
+                    // write_count_pkt();
                     // ****************update cm sketch************//
                     Insert_CM0();
                     Insert_CM1();
                     Insert_CM2();
-                    find_min(hdr.est_cm.freq, meta.cnt_cm0, meta.cnt_cm1, meta.cnt_cm2);
+                    
+                    // find_min(hdr.est_cm.freq, meta.cnt_cm0, meta.cnt_cm1, meta.cnt_cm2);
 
                     // ****************update h-table************//
                     bit<ID_CELL_SIZE> curID = 0;
@@ -329,10 +331,13 @@ control MyIngress(inout headers hdr,
                         // TSET: if not matched, we drop the packet
                         // drop();
                         // return;
+                        
+                        // cannot restore the new resubmit_f when resubmitting
+                        // so we set est_cm = 1 to indicate resubmitting
+                        // in this way, this value stored in hdr can be maintained when resubmitting
+                        hdr.est_cm.freq = 1;
                         meta.resubmit_meta.resubmit_f = 1;
-                        meta.resubmit_meta.resubmit_reason = 1;
-                        // resubmit<resubmit_meta_t>(meta.resubmit_meta);
-                        resubmit<resubmit_meta_t>({meta.resubmit_meta.resubmit_reason, meta.resubmit_meta.resubmit_f});
+                        resubmit<resub_meta_t>({meta.resubmit_meta.resubmit_f});
                     }
                 }
                 else{ 
