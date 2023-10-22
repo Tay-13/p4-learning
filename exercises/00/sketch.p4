@@ -7,7 +7,7 @@
 
 /* CONSTANTS */
 const bit<32> SKETCH_BUCKET_LENGTH = 10;
-const bit<32> TABLE_CELL_LENGTH = 1000;
+const bit<32> TABLE_CELL_LENGTH = 50;
 
 #define ID_CELL_SIZE 10w32
 
@@ -15,7 +15,7 @@ const bit<32> TABLE_CELL_LENGTH = 1000;
 
 
 #define SKETCH_HASH_MAX 10w9  // define the max hash value, set to the SKETCH_BUCKET_LENGTH
-#define TABLE_HASH_MAX 10w999
+#define TABLE_HASH_MAX 10w49
 #define HASH_BASE 10w0
 
 
@@ -42,6 +42,14 @@ control MyIngress(inout headers hdr,
         if(mincnt > cnt3) {
             mincnt = cnt3;
         }
+    }
+
+    register<bit<32>>(1) count_pkt;
+    action write_count_pkt() {
+        bit<32> tmp;
+        count_pkt.read(tmp, 0);
+        tmp = tmp + 1;
+        count_pkt.write(0, tmp);
     }
 
     // *******  CM sketch ******************* //
@@ -130,7 +138,7 @@ control MyIngress(inout headers hdr,
 
     action read_ID_Table0() {
         hash(meta.index_ht0, HashAlgorithm.crc16, HASH_BASE, 
-            {hdr.tcp.srcPort, 10w12}, TABLE_HASH_MAX);
+            {hdr.tcp.srcPort}, TABLE_HASH_MAX);
         ht_ID0.read(meta.id_ht0, meta.index_ht0);
         // matched cell
         if(meta.id_ht0 == hdr.id.key_id){
@@ -162,7 +170,7 @@ control MyIngress(inout headers hdr,
     
     action read_ID_Table1() {
         hash(meta.index_ht1, HashAlgorithm.crc32, HASH_BASE, 
-            {hdr.tcp.srcPort, 10w34}, TABLE_HASH_MAX);
+            {hdr.tcp.srcPort}, TABLE_HASH_MAX);
         ht_ID1.read(meta.id_ht1, meta.index_ht1);
         if(meta.id_ht1 == hdr.id.key_id){
             hdr.id.matched = 1;
@@ -190,7 +198,7 @@ control MyIngress(inout headers hdr,
     
     action read_ID_Table2() {
         hash(meta.index_ht2, HashAlgorithm.crc32_custom, HASH_BASE, 
-            {hdr.tcp.srcPort, 10w56}, TABLE_HASH_MAX);
+            {hdr.tcp.srcPort}, TABLE_HASH_MAX);
         ht_ID2.read(meta.id_ht2, meta.index_ht2);
         if(meta.id_ht2 == hdr.id.key_id){
             hdr.id.matched = 1;
@@ -245,9 +253,11 @@ control MyIngress(inout headers hdr,
         default_action = NoAction();
     }
 
+
     apply {
         if (hdr.ipv4.isValid()){
             if (hdr.tcp.isValid()){
+                write_count_pkt();
                 if(meta.resubmit_meta.resubmit_reason == 0) {
                     // ****************update cm sketch************//
                     Insert_CM0();
@@ -325,14 +335,14 @@ control MyIngress(inout headers hdr,
                         hdr.id.min_index_ht = meta.index_ht2;
                     }
                     // if not matched, mark resubmitted and resubmit
-                    if(hdr.id.matched == 0){
+                    if(hdr.id.matched == 0) {
                         // TSET: if not matched, we drop the packet
                         // drop();
                         // return;
                         meta.resubmit_meta.resubmit_f = 1;
                         meta.resubmit_meta.resubmit_reason = 1;
                         // resubmit<resubmit_meta_t>(meta.resubmit_meta);
-                        // resubmit<bit<1>>(1);
+                        resubmit<resubmit_meta_t>({meta.resubmit_meta.resubmit_reason, meta.resubmit_meta.resubmit_f});
                     }
                 }
                 else{ 
@@ -340,7 +350,7 @@ control MyIngress(inout headers hdr,
                     // TSET
                     // drop();
                     // return;
-                    
+                    // write_count_pkt();
                     // update ID
                     if(hdr.id.min_stage == 0){
                         // if min cell value is 1, we replace the ID
@@ -378,10 +388,9 @@ control MyIngress(inout headers hdr,
                             ht_counter2.write(hdr.id.min_index_ht, hdr.id.min_cnt_ht-1);
                         }
                     }
-                }
-                
-                ipv4_lpm.apply();       
-            } 
+                }   
+            }
+            ipv4_lpm.apply();     
         }
     }               
     
