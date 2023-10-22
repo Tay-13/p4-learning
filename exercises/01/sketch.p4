@@ -201,34 +201,21 @@ control MyIngress(inout headers hdr,
     }
 
 
-    action drop() {
-        mark_to_drop(standard_metadata);
+    action set_egress_port(bit<9> egress_port){
+        standard_metadata.egress_spec = egress_port;
     }
-    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
 
-        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
-
-       //set the destination mac address that we got from the match in the table
-        hdr.ethernet.dstAddr = dstAddr;
-
-        //set the output port that we also get from the table
-        standard_metadata.egress_spec = port;
-
-        //decrease ttl by 1
-        hdr.ipv4.ttl = hdr.ipv4.ttl -1;
-
-    }
-    table ipv4_lpm {
+    table forwarding {
         key = {
-            hdr.ipv4.dstAddr: lpm;
+            standard_metadata.ingress_port: exact;
         }
         actions = {
-            ipv4_forward;
+            set_egress_port;
             drop;
             NoAction;
         }
-        size = 1024;
-        default_action = NoAction();
+        size = 64;
+        default_action = drop;
     }
 
 
@@ -368,7 +355,8 @@ control MyIngress(inout headers hdr,
                     }
                 }   
             }
-            ipv4_lpm.apply();     
+            // ipv4_lpm.apply(); 
+            forwarding.apply();    
         }
     }               
     
