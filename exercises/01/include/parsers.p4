@@ -11,10 +11,8 @@ parser MyParser(packet_in packet,
         // setup for meta of CM sketch
         meta.index_cm0 = 0;
         meta.index_cm1 = 0;
-        meta.index_cm2 = 0;
         meta.cnt_cm0 = 0;
         meta.cnt_cm1 = 0;
-        meta.cnt_cm2 = 0;
         meta.min_cnt_cm = 0;
 
         // setup for meta of H-Table
@@ -32,9 +30,6 @@ parser MyParser(packet_in packet,
         meta.id_ht1 = 0;
         meta.id_ht2 = 0;
         meta.id = 0;
-        
-        meta.resubmit_meta.resubmit_reason = 0;
-        meta.resubmit_meta.resubmit_f = 0;
 
         transition parse_ethernet;
     }
@@ -74,39 +69,8 @@ parser MyParser(packet_in packet,
         hdr.id.min_cnt_ht = 0;
         hdr.id.min_index_ht = 0;
         hdr.id.min_stage = 0;
-        hdr.id.resubmitted = 0;
         transition accept;
     }
-
-    // state parse_estimate {
-    //     packet.extract(hdr.est_cm);
-    //     transition select(meta.resubmit_meta.resubmit_f) {
-	// 		0: parse_new;
-	// 		1: parse_resubmit;
-	// 	}
-    // }
-
-    // state parse_new {
-    //     hdr.id.key_id = 0;
-    //     hdr.id.matched = 0;
-    //     hdr.id.min_cnt_ht = 0;
-    //     hdr.id.min_index_ht = 0;
-    //     hdr.id.min_stage = 0;
-    //     hdr.id.resubmitted = 0;
-    //     transition accept;
-    // }
-
-    // state parse_resubmit {
-    //     packet.extract(hdr.id);
-    //     transition accept;
-    // }
-
-    // TO DO
-    // for writing the tuple to the header of resubmitted packet 
-    // state parse_resubmit {
-    //    hdr.resub.resubmit_f = 0;
-    //    transition accept;
-    //}
 }
 
 

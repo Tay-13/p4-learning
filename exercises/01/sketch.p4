@@ -20,9 +20,6 @@ const bit<32> TABLE_CELL_LENGTH = 50;
 
 
 
-
-
-
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
 *************************************************************************/
@@ -31,16 +28,11 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    action find_min(inout bit<32> mincnt, in bit<32> cnt1, in bit<32> cnt2,
-                    in bit<32> cnt3) {
+    action find_min(inout bit<32> mincnt, in bit<32> cnt1, in bit<32> cnt2) {
         if(cnt1 < cnt2) {
             mincnt = cnt1;
         } else {
             mincnt = cnt2;
-        }
-
-        if(mincnt > cnt3) {
-            mincnt = cnt3;
         }
     }
 
@@ -76,20 +68,6 @@ control MyIngress(inout headers hdr,
     action Query_CM1() {
         cms_r1.read(meta.cnt_cm1, meta.index_cm1);
     }
-
-    register<bit<32>>(SKETCH_BUCKET_LENGTH) cms_r2;
-    action Insert_CM2() {
-        hash(meta.index_cm2, HashAlgorithm.crc16_custom, HASH_BASE,
-                {hdr.tcp.srcPort}, SKETCH_HASH_MAX);
-        cms_r2.read(meta.cnt_cm2, meta.index_cm2);
-        meta.cnt_cm2 = meta.cnt_cm2 + 1;
-        cms_r2.write(meta.index_cm2, meta.cnt_cm2);
-    }
-    action Query_CM2() {
-        cms_r2.read(meta.cnt_cm2, meta.index_cm2);
-    }
-
-
 
     // *******  H-Table ******************* //
     

@@ -123,6 +123,13 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
+    register<bit<32>>(1) count_pkt;
+    action write_count_pkt() {
+        bit<32> tmp;
+        count_pkt.read(tmp, 0);
+        tmp = tmp + 1;
+        count_pkt.write(0, tmp);
+    }
 
     register<bit<BLOOM_FILTER_BIT_WIDTH>>(BLOOM_FILTER_ENTRIES) bloom_filter;
 
@@ -190,6 +197,7 @@ control MyIngress(inout headers hdr,
     apply {
         if (hdr.ipv4.isValid()){
             if (hdr.tcp.isValid()){
+                write_count_pkt();
                 update_bloom_filter();
                 //only if IPV4 the rule is applied. Therefore other packets will not be forwarded.
                 if ( (meta.counter_one > PACKET_THRESHOLD && meta.counter_two > PACKET_THRESHOLD) ){
