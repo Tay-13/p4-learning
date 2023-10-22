@@ -9,6 +9,8 @@ net.setLogLevel('info')
 net.addP4Switch('s1', cli_input='s1-commands.txt')
 net.addP4Switch('s2', cli_input='s2-commands.txt')
 net.setP4SourceAll('sketch.p4')
+# net.setP4SourceAll('resubmit_test.p4')
+
 
 net.addHost('h1')
 net.addHost('h2')

@@ -6,7 +6,7 @@
 #include "include/parsers.p4"
 
 /* CONSTANTS */
-const bit<32> SKETCH_BUCKET_LENGTH = 1024;
+const bit<32> SKETCH_BUCKET_LENGTH = 10;
 const bit<32> TABLE_CELL_LENGTH = 1000;
 
 #define ID_CELL_SIZE 10w32
@@ -14,9 +14,12 @@ const bit<32> TABLE_CELL_LENGTH = 1000;
 #define EMPTY_CELL 32w0
 
 
-#define SKETCH_HASH_MAX 10w1023  // define the max hash value, set to the SKETCH_BUCKET_LENGTH
+#define SKETCH_HASH_MAX 10w9  // define the max hash value, set to the SKETCH_BUCKET_LENGTH
 #define TABLE_HASH_MAX 10w999
 #define HASH_BASE 10w0
+
+
+
 
 
 
@@ -27,7 +30,6 @@ const bit<32> TABLE_CELL_LENGTH = 1000;
 control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
-    
 
     action find_min(inout bit<32> mincnt, in bit<32> cnt1, in bit<32> cnt2,
                     in bit<32> cnt3) {
@@ -246,7 +248,7 @@ control MyIngress(inout headers hdr,
     apply {
         if (hdr.ipv4.isValid()){
             if (hdr.tcp.isValid()){
-                if(meta.resubmit_meta.resubmit_f == 0){
+                if(meta.resubmit_meta.resubmit_reason == 0) {
                     // ****************update cm sketch************//
                     Insert_CM0();
                     Insert_CM1();
@@ -322,71 +324,67 @@ control MyIngress(inout headers hdr,
                         hdr.id.min_stage = 2;
                         hdr.id.min_index_ht = meta.index_ht2;
                     }
+                    // if not matched, mark resubmitted and resubmit
+                    if(hdr.id.matched == 0){
+                        // TSET: if not matched, we drop the packet
+                        // drop();
+                        // return;
+                        meta.resubmit_meta.resubmit_f = 1;
+                        meta.resubmit_meta.resubmit_reason = 1;
+                        // resubmit<resubmit_meta_t>(meta.resubmit_meta);
+                        // resubmit<bit<1>>(1);
+                    }
                 }
-
-                // if not matched, mark resubmitted and resubmit
-                if(hdr.id.matched == 0){
-                    // TSET: if not matched, we drop the packet
+                else{ 
+                    // RESUBMIT
+                    // TSET
                     // drop();
                     // return;
-                    meta.resubmit_meta.resubmit_f = 1;
-                    // resubmit<resubmit_meta_t>(meta.resubmit_meta);
-                    resubmit<bit<8>>(0);
-                }
-                else{
-                    ipv4_lpm.apply();
-                }
-            }
-            // RESUBMIT
-            else{
-                // TSET
-                // drop();
-                // return;
-                
-                // update ID
-                if(hdr.id.min_stage == 0){
-                    // if min cell value is 1, we replace the ID
-                    if(hdr.id.min_cnt_ht == 1){
-                        ht_ID0.write(hdr.id.min_index_ht, hdr.id.key_id);
+                    
+                    // update ID
+                    if(hdr.id.min_stage == 0){
+                        // if min cell value is 1, we replace the ID
+                        if(hdr.id.min_cnt_ht == 1){
+                            ht_ID0.write(hdr.id.min_index_ht, hdr.id.key_id);
+                        }
                     }
-                }
-                else if(hdr.id.min_stage == 1){
-                    if(hdr.id.min_cnt_ht == 1){
-                        ht_ID1.write(hdr.id.min_index_ht, hdr.id.key_id);
+                    else if(hdr.id.min_stage == 1){
+                        if(hdr.id.min_cnt_ht == 1){
+                            ht_ID1.write(hdr.id.min_index_ht, hdr.id.key_id);
+                        }
                     }
-                }
-                else{
-                    if(hdr.id.min_cnt_ht == 1){
-                        ht_ID2.write(hdr.id.min_index_ht, hdr.id.key_id);
+                    else{
+                        if(hdr.id.min_cnt_ht == 1){
+                            ht_ID2.write(hdr.id.min_index_ht, hdr.id.key_id);
+                        }
                     }
-                }
 
-                // update counter
-                if(hdr.id.min_stage == 0){
-                    // if min cell value is 1, we replace the ID
-                    if(hdr.id.min_cnt_ht > 1){
-                        ht_counter0.write(hdr.id.min_index_ht, hdr.id.min_cnt_ht-1);
+                    // update counter
+                    if(hdr.id.min_stage == 0){
+                        // if min cell value is 1, we replace the ID
+                        if(hdr.id.min_cnt_ht > 1){
+                            ht_counter0.write(hdr.id.min_index_ht, hdr.id.min_cnt_ht-1);
+                        }
+                    }
+                    if(hdr.id.min_stage == 1){
+                        // if min cell value is 1, we replace the ID
+                        if(hdr.id.min_cnt_ht > 1){
+                            ht_counter1.write(hdr.id.min_index_ht, hdr.id.min_cnt_ht-1);
+                        }
+                    }
+                    if(hdr.id.min_stage == 2){
+                        // if min cell value is 1, we replace the ID
+                        if(hdr.id.min_cnt_ht > 1){
+                            ht_counter2.write(hdr.id.min_index_ht, hdr.id.min_cnt_ht-1);
+                        }
                     }
                 }
-                if(hdr.id.min_stage == 1){
-                    // if min cell value is 1, we replace the ID
-                    if(hdr.id.min_cnt_ht > 1){
-                        ht_counter1.write(hdr.id.min_index_ht, hdr.id.min_cnt_ht-1);
-                    }
-                }
-                if(hdr.id.min_stage == 2){
-                    // if min cell value is 1, we replace the ID
-                    if(hdr.id.min_cnt_ht > 1){
-                        ht_counter2.write(hdr.id.min_index_ht, hdr.id.min_cnt_ht-1);
-                    }
-                }
-                ipv4_lpm.apply();
-            }
-            
-            // ipv4_lpm.apply();
-                 
+                
+                ipv4_lpm.apply();       
+            } 
         }
-    }
+    }               
+    
 }
 
 /*************************************************************************

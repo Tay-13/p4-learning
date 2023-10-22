@@ -33,9 +33,7 @@ parser MyParser(packet_in packet,
         meta.id_ht2 = 0;
         meta.id = 0;
         
-        // meta.resubmit_reason = 0;
-        //meta.resubmit_f = 0;
-        
+        meta.resubmit_meta.resubmit_reason = 0;
         meta.resubmit_meta.resubmit_f = 0;
 
         transition parse_ethernet;

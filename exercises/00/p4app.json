@@ -1,5 +1,5 @@
 {
-  "p4_src": "heavy_hitter.p4",
+  "p4_src": "sketch.p4",
   "cli": true,
   "pcap_dump": false,
   "enable_log": false,
@@ -15,11 +15,11 @@
     "switches": {
       "s1": {
         "cli_input": "s1-commands.txt",
-        "program": "heavy_hitter.p4"
+        "program": "sketch.p4"
       },
       "s2": {
         "cli_input": "s2-commands.txt",
-        "program": "heavy_hitter.p4"
+        "program": "sketch.p4"
       }
     }
   }
