@@ -52,9 +52,9 @@ header tcp_t{
 }
 
 struct resubmit_meta_t{
-    @resubmit(0)
+    // @resubmit(0)
     @resubmit(0) bit<8> resubmit_f;  // 0: new packet; 1: resubmitted packet
-
+    // bit<8> resubmit_f;  // 0: new packet; 1: resubmitted packet
 }
 
 struct metadata {
@@ -97,6 +97,7 @@ header flowID_t {
     bit<32> min_cnt_ht;
     bit<32> min_index_ht; 
     bit<8> min_stage;
+    bit<8> resubmitted;
 }
 
 header estimate_t {
@@ -111,7 +112,5 @@ struct headers {
     tcp_t        tcp;
     estimate_t   est_cm;
     flowID_t     id;
-    // TO DO
-    // heavy_tuple  my_tuple;
 }
 

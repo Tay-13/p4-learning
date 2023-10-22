@@ -330,13 +330,13 @@ control MyIngress(inout headers hdr,
                     // drop();
                     // return;
                     meta.resubmit_meta.resubmit_f = 1;
-                    resubmit<resubmit_meta_t>(meta.resubmit_meta);
+                    // resubmit<resubmit_meta_t>(meta.resubmit_meta);
+                    resubmit<bit<8>>(0);
                 }
                 else{
                     ipv4_lpm.apply();
                 }
             }
-            // TO DO
             // RESUBMIT
             else{
                 // TSET
@@ -382,7 +382,8 @@ control MyIngress(inout headers hdr,
                 }
                 ipv4_lpm.apply();
             }
-
+            
+            // ipv4_lpm.apply();
                  
         }
     }

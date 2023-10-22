@@ -70,9 +70,38 @@ parser MyParser(packet_in packet,
     }
 
     state parse_flowID {
-        packet.extract(hdr.id);
+        // packet.extract(hdr.id);
+        hdr.id.key_id = 0;
+        hdr.id.matched = 0;
+        hdr.id.min_cnt_ht = 0;
+        hdr.id.min_index_ht = 0;
+        hdr.id.min_stage = 0;
+        hdr.id.resubmitted = 0;
         transition accept;
     }
+
+    // state parse_estimate {
+    //     packet.extract(hdr.est_cm);
+    //     transition select(meta.resubmit_meta.resubmit_f) {
+	// 		0: parse_new;
+	// 		1: parse_resubmit;
+	// 	}
+    // }
+
+    // state parse_new {
+    //     hdr.id.key_id = 0;
+    //     hdr.id.matched = 0;
+    //     hdr.id.min_cnt_ht = 0;
+    //     hdr.id.min_index_ht = 0;
+    //     hdr.id.min_stage = 0;
+    //     hdr.id.resubmitted = 0;
+    //     transition accept;
+    // }
+
+    // state parse_resubmit {
+    //     packet.extract(hdr.id);
+    //     transition accept;
+    // }
 
     // TO DO
     // for writing the tuple to the header of resubmitted packet 
