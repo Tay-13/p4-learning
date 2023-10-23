@@ -6,17 +6,17 @@
 #include "include/parsers.p4"
 
 /* CONSTANTS */
-const bit<32> SKETCH_BUCKET_LENGTH = 10;
-const bit<32> TABLE_CELL_LENGTH = 50;
+const bit<32> SKETCH_BUCKET_LENGTH = 1024;
+const bit<32> TABLE_CELL_LENGTH = 65536;
 
 #define ID_CELL_SIZE 10w32
 
 #define EMPTY_CELL 32w0
 
 
-#define SKETCH_HASH_MAX 10w9  // define the max hash value, set to the SKETCH_BUCKET_LENGTH
-#define TABLE_HASH_MAX 10w49
-#define HASH_BASE 10w0
+#define SKETCH_HASH_MAX 17w1023  // define the max hash value, set to the SKETCH_BUCKET_LENGTH
+#define TABLE_HASH_MAX 17w65535
+#define HASH_BASE 17w0
 
 
 
@@ -44,6 +44,10 @@ control MyIngress(inout headers hdr,
         }
     }
 
+
+    // For TEST
+    // count_pkt[0] stores the number of packets that go through first pass
+    // count_pkt[1] stores the number of resubmitted packets
     register<bit<32>>(2) count_pkt;
     action write_count_pkt() {
         bit<32> tmp;
@@ -233,29 +237,44 @@ control MyIngress(inout headers hdr,
     action drop() {
         mark_to_drop(standard_metadata);
     }
-    action set_egress_port(bit<9> egress_port){
-        standard_metadata.egress_spec = egress_port;
+     action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
+
+        //set the src mac address as the previous dst, this is not correct right?
+        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+
+       //set the destination mac address that we got from the match in the table
+        hdr.ethernet.dstAddr = dstAddr;
+
+        //set the output port that we also get from the table
+        standard_metadata.egress_spec = port;
+
+        //decrease ttl by 1
+        hdr.ipv4.ttl = hdr.ipv4.ttl -1;
+
     }
 
-    table forwarding {
+    table ipv4_lpm {
         key = {
-            standard_metadata.ingress_port: exact;
+            hdr.ipv4.dstAddr: lpm;
         }
         actions = {
-            set_egress_port;
+            ipv4_forward;
             drop;
             NoAction;
         }
-        size = 64;
-        default_action = drop;
+        size = 1024;
+        default_action = NoAction();
     }
 
 
     apply {
         if (hdr.ipv4.isValid()){
+            ipv4_lpm.apply();
             if (hdr.tcp.isValid()){
-                if(hdr.est_cm.freq == 0)  { 
+                if(meta.resubmit_meta.resubmit_f == 0)  { 
+                    // 
                     write_count_pkt();
+                    
                     // ****************update cm sketch************//
                     Insert_CM0();
                     Insert_CM1();
@@ -337,15 +356,9 @@ control MyIngress(inout headers hdr,
                         // TSET: if not matched, we drop the packet
                         // drop();
                         // return;
-                        
-                        // cannot restore the new resubmit_f when resubmitting
-                        // so we set est_cm = 1 to indicate resubmitting
-                        // in this way, this value stored in hdr can be maintained when resubmitting
-                        hdr.est_cm.freq = 2;
                         meta.resubmit_meta.resubmit_f = 1;
-                        resubmit<resub_meta_t>({meta.resubmit_meta.resubmit_f});
+                        resubmit_preserving_field_list(0);
                     }
-                    
                 }
                 else{
                     // RESUBMIT
@@ -391,9 +404,8 @@ control MyIngress(inout headers hdr,
                         }
                     }
                 }  
-            }
-            // ipv4_lpm.apply();     
-            forwarding.apply();
+            }            
+            // forwarding.apply();
         }
     }               
     
