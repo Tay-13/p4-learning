@@ -6,16 +6,16 @@
 #include "include/parsers.p4"
 
 /* CONSTANTS */
-const bit<32> SKETCH_BUCKET_LENGTH = 10;
-const bit<32> TABLE_CELL_LENGTH = 10;
+const bit<32> SKETCH_BUCKET_LENGTH = 1024;
+const bit<32> TABLE_CELL_LENGTH = 65536;
 
 #define ID_CELL_SIZE 10w32
 
 #define EMPTY_CELL 32w0
 
 
-#define SKETCH_HASH_MAX 17w9  // define the max hash value, set to the SKETCH_BUCKET_LENGTH
-#define TABLE_HASH_MAX 17w9
+#define SKETCH_HASH_MAX 17w1023  // define the max hash value, set to the SKETCH_BUCKET_LENGTH
+#define TABLE_HASH_MAX 17w65535
 #define HASH_BASE 17w0
 
 
@@ -240,10 +240,10 @@ control MyIngress(inout headers hdr,
      action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
 
         //set the src mac address as the previous dst, this is not correct right?
-        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+        // hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
 
        //set the destination mac address that we got from the match in the table
-        hdr.ethernet.dstAddr = dstAddr;
+        // hdr.ethernet.dstAddr = dstAddr;
 
         //set the output port that we also get from the table
         standard_metadata.egress_spec = port;
