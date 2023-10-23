@@ -269,8 +269,8 @@ control MyIngress(inout headers hdr,
 
     apply {
         if (hdr.ipv4.isValid()){
-            ipv4_lpm.apply();
             if (hdr.tcp.isValid()){
+                ipv4_lpm.apply();
                 if(meta.resubmit_meta.resubmit_f == 0)  { 
                     // 
                     write_count_pkt();
