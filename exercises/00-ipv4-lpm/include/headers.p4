@@ -51,13 +51,20 @@ header tcp_t{
     bit<16> urgentPtr;
 }
 
+struct resubmit_meta_t{
+    @field_list(0)
+    bit<8> resubmit_f;  // 0: new packet; 1: resubmitted packet
+    // bit<1> resubmit_f;  // 0: new packet; 1: resubmitted packet
+}
 
 struct metadata {
     // meta of CM sketch
     bit<32> index_cm0;
     bit<32> index_cm1;
+    bit<32> index_cm2;
     bit<32> cnt_cm0;
     bit<32> cnt_cm1;
+    bit<32> cnt_cm2;
     bit<32> min_cnt_cm;
 
     // meta of H-Table
@@ -78,6 +85,10 @@ struct metadata {
     bit<32> id_ht1;
     bit<32> id_ht2;
     bit<32> id;
+    
+    // define resubmitted metadata
+    // bit<3> resubmit_reason;
+    resubmit_meta_t resubmit_meta;
 }
 
 header flowID_t {
@@ -89,7 +100,7 @@ header flowID_t {
 }
 
 header estimate_t {
-    bit<32>  freq;
+    bit<8>  freq;
 }
 
 

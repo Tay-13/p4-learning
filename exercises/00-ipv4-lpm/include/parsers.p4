@@ -11,8 +11,10 @@ parser MyParser(packet_in packet,
         // setup for meta of CM sketch
         meta.index_cm0 = 0;
         meta.index_cm1 = 0;
+        meta.index_cm2 = 0;
         meta.cnt_cm0 = 0;
         meta.cnt_cm1 = 0;
+        meta.cnt_cm2 = 0;
         meta.min_cnt_cm = 0;
 
         // setup for meta of H-Table
@@ -30,7 +32,7 @@ parser MyParser(packet_in packet,
         meta.id_ht1 = 0;
         meta.id_ht2 = 0;
         meta.id = 0;
-
+        
         transition parse_ethernet;
     }
 
@@ -53,17 +55,30 @@ parser MyParser(packet_in packet,
     state parse_tcp {
         packet.extract(hdr.tcp);
         // transition accept;
-        // TO DO
         transition parse_estimate;
     }
 
+    // state parse_estimate {
+    //    packet.extract(hdr.est_cm);
+    //    transition parse_flowID;
+    // }
+
+    // state parse_flowID {
+    //     packet.extract(hdr.id);
+    //     transition accept;
+    // }
+
+
     state parse_estimate {
         packet.extract(hdr.est_cm);
-        transition parse_flowID;
+        transition select(meta.resubmit_meta.resubmit_f) {
+            0: parse_new;	
+            1 : parse_resubmit;  
+		}
     }
 
-    state parse_flowID {
-        // packet.extract(hdr.id);
+    state parse_new {
+        packet.extract(hdr.id);
         hdr.id.key_id = 0;
         hdr.id.matched = 0;
         hdr.id.min_cnt_ht = 0;
@@ -71,6 +86,12 @@ parser MyParser(packet_in packet,
         hdr.id.min_stage = 0;
         transition accept;
     }
+
+    state parse_resubmit {
+        packet.extract(hdr.id);
+        transition accept;
+    }
+
 }
 
 

@@ -6,16 +6,16 @@
 #include "include/parsers.p4"
 
 /* CONSTANTS */
-const bit<32> SKETCH_BUCKET_LENGTH = 1024;
-const bit<32> TABLE_CELL_LENGTH = 65536;
+const bit<32> SKETCH_BUCKET_LENGTH = 10;
+const bit<32> TABLE_CELL_LENGTH = 10;
 
 #define ID_CELL_SIZE 10w32
 
 #define EMPTY_CELL 32w0
 
 
-#define SKETCH_HASH_MAX 17w1023  // define the max hash value, set to the SKETCH_BUCKET_LENGTH
-#define TABLE_HASH_MAX 17w65535
+#define SKETCH_HASH_MAX 17w9  // define the max hash value, set to the SKETCH_BUCKET_LENGTH
+#define TABLE_HASH_MAX 17w9
 #define HASH_BASE 17w0
 
 
