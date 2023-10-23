@@ -44,12 +44,19 @@ control MyIngress(inout headers hdr,
         }
     }
 
-    register<bit<32>>(1) count_pkt;
+    register<bit<32>>(2) count_pkt;
     action write_count_pkt() {
         bit<32> tmp;
         count_pkt.read(tmp, 0);
         tmp = tmp + 1;
         count_pkt.write(0, tmp);
+    }
+
+    action write_count_pkt1() {
+        bit<32> tmp;
+        count_pkt.read(tmp, 1);
+        tmp = tmp + 1;
+        count_pkt.write(1, tmp);
     }
 
     // *******  CM sketch ******************* //
@@ -247,9 +254,8 @@ control MyIngress(inout headers hdr,
     apply {
         if (hdr.ipv4.isValid()){
             if (hdr.tcp.isValid()){
-                // if(meta.resubmit_meta.resubmit_f != 1) {
-                if(hdr.est_cm.freq != 1) {
-                    // write_count_pkt();
+                if(hdr.est_cm.freq == 0)  { 
+                    write_count_pkt();
                     // ****************update cm sketch************//
                     Insert_CM0();
                     Insert_CM1();
@@ -335,17 +341,18 @@ control MyIngress(inout headers hdr,
                         // cannot restore the new resubmit_f when resubmitting
                         // so we set est_cm = 1 to indicate resubmitting
                         // in this way, this value stored in hdr can be maintained when resubmitting
-                        hdr.est_cm.freq = 1;
+                        hdr.est_cm.freq = 2;
                         meta.resubmit_meta.resubmit_f = 1;
                         resubmit<resub_meta_t>({meta.resubmit_meta.resubmit_f});
                     }
+                    
                 }
-                else{ 
+                else{
                     // RESUBMIT
                     // TSET
                     // drop();
                     // return;
-                    write_count_pkt();
+                    write_count_pkt1();
                     // update ID
                     if(hdr.id.min_stage == 0){
                         // if min cell value is 1, we replace the ID
@@ -383,7 +390,7 @@ control MyIngress(inout headers hdr,
                             ht_counter2.write(hdr.id.min_index_ht, hdr.id.min_cnt_ht-1);
                         }
                     }
-                }   
+                }  
             }
             // ipv4_lpm.apply();     
             forwarding.apply();

@@ -77,8 +77,8 @@ parser MyParser(packet_in packet,
     state parse_estimate {
         packet.extract(hdr.est_cm);
         transition select(hdr.est_cm.freq) {
-            1 : parse_resubmit;
-            default : parse_new;	
+            2 : parse_resubmit;
+            0: parse_new;	
 		}
     }
 

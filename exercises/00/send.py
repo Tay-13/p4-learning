@@ -17,8 +17,8 @@ def send_random_traffic(dst_ip, num_packets):
     total_pkts = 0
     for i in range(num_packets):
         dst_addr = socket.gethostbyname(dst_ip)
-        random_dport = random.randint(0,100)
-        random_sport = random.randint(0,2)
+        random_dport = random.randint(0,1024)
+        random_sport = random.randint(0,1)
         iface = get_if()
         #For this exercise the destination mac address is not important. Just ignore the value we use.
         p = Ether(dst="00:01:0a:02:02:00", src=get_if_hwaddr(iface)) / IP(dst=dst_addr)

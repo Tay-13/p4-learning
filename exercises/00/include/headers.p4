@@ -99,7 +99,7 @@ header flowID_t {
 }
 
 header estimate_t {
-    bit<32>  freq;
+    bit<8>  freq;
 }
 
 
