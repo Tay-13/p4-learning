@@ -1,4 +1,5 @@
-from scapy.all import Ether, IP, sendp, get_if_hwaddr, get_if_list, TCP, Raw
+# from scapy.all import Ether, IP, sendp, get_if_hwaddr, get_if_list, TCP, Raw
+from scapy.all import *
 import sys, socket, random
 
 def get_if():
@@ -24,6 +25,7 @@ def send_random_traffic(dst_ip, num_packets):
         p = Ether(dst="00:00:00:00:01:02", src=get_if_hwaddr(iface)) / IP(dst=dst_addr)
         p = p / TCP(sport=random_sport,dport=random_dport)
         sendp(p, iface = iface)
+        # sendpfast(p, pps = 100000000, iface = iface)
         total_pkts += 1
     print("Sent %s packets in total" % total_pkts)
 

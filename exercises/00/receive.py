@@ -47,21 +47,21 @@ def handle_pkt(pkt):
         totals[id_tup] += 1
         # print("Received from %s total: %s" % (id_tup, totals[id_tup]))
     
-    end_time = time.time()
-    timestamp.append(end_time)
+    # end_time = time.time()
+    # timestamp.append(end_time)
 
 
 
 def main():
-    sniff(iface = iface, prn = lambda x: handle_pkt(x))
-    # cProfile.run("sniff(iface = iface, prn = lambda x: handle_pkt(x))")
+    # sniff(iface = iface, prn = lambda x: handle_pkt(x))
+    cProfile.run("sniff(iface = iface, prn = lambda x: handle_pkt(x))")
     sum = 0
     for value in totals.values():
         sum += value
 
     print("total : ", sum, "; distinct : ", len(totals))
     # print(timestamp)
-    print("time : ", timestamp[-1]-timestamp[0])
+    # print("time : ", timestamp[-1]-timestamp[0])
 
 
 if __name__ == '__main__':

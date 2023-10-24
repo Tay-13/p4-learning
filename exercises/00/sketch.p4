@@ -71,6 +71,7 @@ control MyIngress(inout headers hdr,
         cms_r0.read(meta.cnt_cm0, meta.index_cm0);
         meta.cnt_cm0 = meta.cnt_cm0 + 1;
         cms_r0.write(meta.index_cm0, meta.cnt_cm0);
+
     }
     action Query_CM0() {
         cms_r0.read(meta.cnt_cm0, meta.index_cm0);
@@ -272,7 +273,7 @@ control MyIngress(inout headers hdr,
             if (hdr.tcp.isValid()){
                 ipv4_lpm.apply();
                 if(meta.resubmit_meta.resubmit_f == 0)  { 
-                    // 
+                    // For TEST
                     write_count_pkt();
                     
                     // ****************update cm sketch************//
@@ -361,11 +362,9 @@ control MyIngress(inout headers hdr,
                     }
                 }
                 else{
-                    // RESUBMIT
-                    // TSET
-                    // drop();
-                    // return;
+                    // RESUBMIT TSET
                     write_count_pkt1();
+                    
                     // update ID
                     if(hdr.id.min_stage == 0){
                         // if min cell value is 1, we replace the ID
