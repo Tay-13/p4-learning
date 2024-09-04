@@ -54,7 +54,8 @@ control MyEgress(inout headers hdr,
             meta.recirculate_meta.stack_length = meta.recirculate_meta.stack_length +1;
             meta.recirculate_meta.stack_length_tmp = meta.recirculate_meta.stack_length;
             if (meta.recirculate_meta.stack_length < hdr.recirculate_header.length) {
-                recirculate_preserving_field_list(0);
+                // recirculate_preserving_field_list(0);
+                recirculate({meta.recirculate_meta.stack_length, meta.recirculate_meta.stack_length_tmp});
                }
             }
         }
