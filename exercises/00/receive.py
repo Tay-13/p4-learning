@@ -4,7 +4,9 @@ from scapy.all import IP, TCP, Ether
 from scapy.layers.inet import _IPOption_HDR
 from scapy.all import Packet, IPOption
 
-
+import time
+import cProfile
+import datetime
 
 def get_if():
     ifs=get_if_list()
@@ -22,9 +24,10 @@ def get_if():
 totals = {}
 iface = get_if()
 
+timestamp=[]
 
 def handle_pkt(pkt):
-
+    
     if IP in pkt and TCP in pkt:
         src_ip = pkt[IP].src
         dst_ip = pkt[IP].dst
@@ -42,19 +45,24 @@ def handle_pkt(pkt):
         if id_tup not in totals:
             totals[id_tup] = 0
         totals[id_tup] += 1
-        print("Received from %s total: %s" %
-                (id_tup, totals[id_tup]))
+        # print("Received from %s total: %s" % (id_tup, totals[id_tup]))
     
+    # end_time = time.time()
+    # timestamp.append(end_time)
+
 
 
 def main():
-    sniff(iface = iface,
-          prn = lambda x: handle_pkt(x))
+    # sniff(iface = iface, prn = lambda x: handle_pkt(x))
+    cProfile.run("sniff(iface = iface, prn = lambda x: handle_pkt(x))")
     sum = 0
     for value in totals.values():
         sum += value
 
     print("total : ", sum, "; distinct : ", len(totals))
+    # print(timestamp)
+    # print("time : ", timestamp[-1]-timestamp[0])
+
 
 if __name__ == '__main__':
     main()

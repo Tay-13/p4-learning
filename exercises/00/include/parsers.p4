@@ -32,7 +32,7 @@ parser MyParser(packet_in packet,
         meta.id_ht1 = 0;
         meta.id_ht2 = 0;
         meta.id = 0;
-
+        
         transition parse_ethernet;
     }
 
@@ -55,7 +55,6 @@ parser MyParser(packet_in packet,
     state parse_tcp {
         packet.extract(hdr.tcp);
         // transition accept;
-        // TO DO
         transition parse_estimate;
     }
 
@@ -65,24 +64,21 @@ parser MyParser(packet_in packet,
     // }
 
     // state parse_flowID {
-    //     // packet.extract(hdr.id);
-    //     hdr.id.key_id = 0;
-    //     hdr.id.matched = 0;
-    //     hdr.id.min_cnt_ht = 0;
-    //     hdr.id.min_index_ht = 0;
-    //     hdr.id.min_stage = 0;
+    //     packet.extract(hdr.id);
     //     transition accept;
     // }
 
+
     state parse_estimate {
         packet.extract(hdr.est_cm);
-        transition select(hdr.est_cm.freq) {
-            2 : parse_resubmit;
+        transition select(meta.resubmit_meta.resubmit_f) {
             0: parse_new;	
+            1 : parse_resubmit;  
 		}
     }
 
     state parse_new {
+        packet.extract(hdr.id);
         hdr.id.key_id = 0;
         hdr.id.matched = 0;
         hdr.id.min_cnt_ht = 0;
